@@ -1,8 +1,55 @@
 import re
+import os
 import chromadb
-import ollama
+
+import time
+from dotenv import load_dotenv
+
+from openai import (
+    OpenAI,
+    APIError,
+    APITimeoutError,
+    APIConnectionError,
+    RateLimitError,
+    InternalServerError,
+    BadRequestError,
+    AuthenticationError,
+    NotFoundError,
+    PermissionDeniedError,
+)
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
+
+class LLMError(Exception):
+    pass
+
+class EmptyLLMResponseError(Exception):
+    pass
+
+def format_error_message(error):
+    return str(error).replace("\n", " ")[:500]
+
+load_dotenv()
+
+MAX_ATTEMPTS = 3
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+LLM_MODEL = os.getenv("LLM_MODEL")
+
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY is missing. Check your .env file.")
+
+if not LLM_MODEL:
+    raise ValueError("LLM_MODEL is missing. Check your .env file.")
+
+client = OpenAI(
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1",
+    timeout=60.0,
+    max_retries=0,
+)
+
+
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -89,21 +136,96 @@ def retrieve(query , n = 3):
 
 
 
+
+
+
 def ask_llm(prompt):
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            response = client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+            )
 
-    response = ollama.chat(
-        model="mistral",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
+            if not response.choices:
+                response_details = format_error_message(
+                    response.model_dump(exclude_none=True)
+                )
 
-    result = response["message"]["content"]
+                raise EmptyLLMResponseError(
+                    f"The model returned no choices. "
+                    f"Response details: {response_details}"
+                )
 
-    return result
+            result = response.choices[0].message.content
+
+            if not result or not result.strip():
+                raise EmptyLLMResponseError(
+                    "The model returned an empty response."
+                )
+
+            return result
+
+        except (
+            BadRequestError,
+            AuthenticationError,
+            NotFoundError,
+        ) as e:
+            raise LLMError(
+                f"LLM request failed: {type(e).__name__}, "
+                f"HTTP status: {getattr(e, 'status_code', None)}, "
+                f"Details: {format_error_message(e)}"
+            ) from e
+
+        except PermissionDeniedError as e:
+            if attempt >= 2:
+                raise LLMError(
+                    f"Permission denied after {attempt} attempts: "
+                    f"{format_error_message(e)}"
+                ) from e
+
+            time.sleep(1)
+
+        except (
+            APITimeoutError,
+            APIConnectionError,
+            RateLimitError,
+            InternalServerError,
+        ) as e:
+            if attempt == MAX_ATTEMPTS:
+                raise LLMError(
+                    f"LLM request failed after {attempt} attempts: "
+                    f"{type(e).__name__}: "
+                    f"{format_error_message(e)}"
+                ) from e
+
+            wait_time = 2 ** (attempt - 1)
+            time.sleep(wait_time)
+
+        except EmptyLLMResponseError as e:
+            if attempt == MAX_ATTEMPTS:
+                raise LLMError(
+                    f"Invalid LLM response after {attempt} attempts: {format_error_message(e)}"
+                ) from e
+
+            time.sleep(1)
+
+        except APIError as e:
+            raise LLMError(
+                f"LLM API request failed: {type(e).__name__}, "
+                f"HTTP status: {getattr(e, 'status_code', None)}, "
+                f"Details: {format_error_message(e)}"
+            ) from e
+
+    raise LLMError("LLM request failed after all attempts.")
+
+
+
 
 
 

@@ -4,3 +4,13 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 vector_store/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Keep the example configuration file
+!.env.example
+
+# Evaluation outputs
+results/
