@@ -1,5 +1,5 @@
 from eval_set import eval_set
-from rag import build_index, retrieve, generate_answer, verify_answer, LLMError, LLM_MODEL
+from rag import build_index, retrieve, generate_answer, verify_answer, LLMError, LLM_MODEL, is_refusal
 import json
 from datetime import datetime
 from pathlib import Path
@@ -30,13 +30,6 @@ def save_evaluation_results(report):
 
     temp_path.replace(results_path)
 
-
-def is_refusal(answer):
-    if not isinstance(answer, str):
-        return False
-
-    normalized_answer = answer.lower().replace("’", "'")
-    return "don't know" in normalized_answer
 
 
 

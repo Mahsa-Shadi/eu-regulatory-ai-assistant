@@ -92,7 +92,7 @@ The verifier is instructed to return exactly one verdict:
 
 If a reply starts with neither, the evaluation reports it as an "unclear verdict" and excludes it from the groundedness denominator. There were no unclear verdicts in the v2 run.
 
-In the evaluation runner (`run_eval.py`), responses detected as refusals are skipped by the judge and measured separately. This behavior applies to the evaluation pipeline; `try_it.py` still sends generated responses to the verifier.
+Responses detected as refusals are skipped by the judge in both `run_eval.py` and `try_it.py`. The shared `is_refusal()` function in `rag.py` detects them. The evaluation measures them separately through the refusal metrics, and `try_it.py` prints `REFUSAL` in place of a verdict.
 
 ## Evaluation
 
@@ -255,7 +255,6 @@ This script reads the configured model from `LLM_MODEL` and checks whether the A
 ```bash
 python try_it.py
 ```
-The model sometimes refuses answerable questions (see Limitations), so a run may print “I don't know”; run it again. For such a response, the verdict printed by `try_it.py` is not meaningful, because this script, unlike the evaluation runner, does not skip the verifier for refusals.
 
 ### 7. Run the evaluation
 

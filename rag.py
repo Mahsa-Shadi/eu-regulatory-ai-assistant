@@ -29,6 +29,14 @@ class EmptyLLMResponseError(Exception):
 def format_error_message(error):
     return str(error).replace("\n", " ")[:500]
 
+
+def is_refusal(answer):
+    if not isinstance(answer, str):
+        return False
+
+    normalized_answer = answer.lower().replace("’", "'")
+    return "don't know" in normalized_answer
+
 load_dotenv()
 
 MAX_ATTEMPTS = 3
