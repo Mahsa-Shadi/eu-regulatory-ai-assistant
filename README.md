@@ -248,7 +248,7 @@ Do not commit your `.env` file or expose your API key.
 python test_openrouter.py
 ```
 
-This script reads the configured model from `LLM_MODEL` and checks whether the API request succeeds.
+This script reads `OPENROUTER_API_KEY` and `LLM_MODEL` from `.env` and sends one simple request to verify that the API key and model work.
 
 ### 6. Run a sample question
 
