@@ -121,3 +121,5 @@ websocket-client==1.9.2
 websockets==17.1
 yarl==1.24.5
 openai==3.28.0
+streamlit==1.67.0
+torchvision==0.28.0
