@@ -4,6 +4,26 @@ A Retrieval-Augmented Generation (RAG) assistant for answering questions about *
 
 The project explores how retrieval, LLM-based answer generation, and automated verification can work together to produce answers grounded in regulatory text, while identifying unsupported claims and handling questions that cannot be answered from the available context.
 
+## Demo
+
+https://github.com/user-attachments/assets/ecffd99d-5d32-4060-8d5b-ff5fca25e2f2
+
+A short video of the local Streamlit app (README copy compressed to 720p). It shows an answerable question, an off-topic question, and the known limitations.
+
+**What the app shows**
+- The generated answer, based on retrieved passages from Article 5.
+- A verdict from an LLM judge (`GROUNDED` / `NOT_GROUNDED`). The judge is another LLM and has not been independently validated.
+- A `REFUSAL` label when the answer contains "don't know"; the judge is skipped in that case.
+- The retrieved chunks with their cosine distance (lower means more similar).
+
+**How to read the demo**
+- The answerable demo question ("How can a social score lead to unfair treatment of people?") was chosen because it was answered and judged `GROUNDED` in all 4 saved evaluation runs. It does not represent typical behaviour.
+- The off-topic question ("What is the capital of Germany?") is a demo example and is not part of the 20-question evaluation set.
+
+**Known limitations**
+- The generator sometimes refuses answerable questions: 1 of 15 in the latest full evaluation run (Nov 1, v2) and up to 3 of 15 in earlier runs, on a 20-question test set with the free hosted model `nvidia/nemotron-3.5-lightning:free`.
+- The app runs locally only and covers Article 5 only. It is a portfolio project, not legal advice.
+
 ## Project Overview
 
 The system follows a RAG pipeline:
@@ -250,23 +270,28 @@ python test_openrouter.py
 
 This script reads `OPENROUTER_API_KEY` and `LLM_MODEL` from `.env` and sends one simple request to verify that the API key and model work.
 
-### 6. Run a sample question
+### 6. Build the vector store
 
 ```bash
-python try_it.py
+python -c "from rag import build_index; build_index()"
 ```
 
-### 7. Run the evaluation
+Run this from the project root, after step 4. The embedding model is downloaded automatically the first time it loads (an internet connection is needed). `build_index()` creates the ChromaDB store in `vector_store/` only if it is empty. The Streamlit app does not build the index itself, so this step is required before launching it.
+
+### 7. Run the Streamlit app
 
 ```bash
-python run_eval.py
+python -m streamlit run app.py
 ```
 
-The first application run downloads the embedding model if it is not already available and builds the local ChromaDB vector store in `vector_store/`.
+### Optional: other scripts
 
-The full evaluation takes several minutes. Pacing between cases and free-model rate limits can affect execution time.
+```bash
+python try_it.py     # one sample question (builds the index if it is missing)
+python run_eval.py   # full evaluation; takes several minutes
+```
 
-Evaluation reports are saved in the local `results/` directory.
+Evaluation reports are saved in local `results/`. Pacing and free-model rate limits affect how long a run takes.
 
 ## Roadmap
 
@@ -276,7 +301,7 @@ Evaluation reports are saved in the local `results/` directory.
 - Evaluate answer completeness in addition to groundedness.
 - Investigate further chunking improvements, especially for the larger `chunk_8`.
 - Run repeated evaluations to measure consistency.
-- Explore a Streamlit interface.
+- Improve the Streamlit interface.
 - Explore LangGraph for more structured agentic workflows.
 
 ## Project Goal
